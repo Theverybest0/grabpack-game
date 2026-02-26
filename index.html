@@ -3,830 +3,775 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Grab-Pack Puzzle Chase (HTML Starter)</title>
+  <title>3D Grab-Pack Puzzle Chase (Starter)</title>
   <style>
-    :root { color-scheme: dark; }
-    html, body { height:100%; margin:0; background:#07080a; }
-    body { display:grid; place-items:center; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
-    #wrap { width:min(1100px, 96vw); }
-    #hud { display:flex; gap:12px; align-items:center; justify-content:space-between; color:#d7dee6; margin:10px 0; }
-    #hud .pill { background:#0f1217; border:1px solid rgba(255,255,255,0.12); padding:8px 10px; border-radius:999px; }
-    #canvas {
-      width:100%;
-      height: min(72vh, 650px);
-      display:block;
-      background:#0a0c10;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,0.14);
-      box-shadow: 0 18px 60px rgba(0,0,0,0.55);
+    :root{ color-scheme:dark; }
+    html,body{ height:100%; margin:0; background:#06070a; overflow:hidden; }
+    #hud{
+      position:fixed; left:12px; right:12px; top:12px;
+      display:flex; gap:10px; align-items:center; justify-content:space-between;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      color:#d7dee6;
+      pointer-events:none;
+      z-index:10;
     }
-    #help { color:#9db0c5; font-size:14px; line-height:1.35; margin-top:8px; }
-    a { color:#9dd6ff; }
+    .pill{
+      background:rgba(15,18,23,0.82);
+      border:1px solid rgba(255,255,255,0.12);
+      padding:8px 10px;
+      border-radius:999px;
+      backdrop-filter: blur(8px);
+    }
+    #msg{
+      position:fixed; left:50%; top:64px; transform:translateX(-50%);
+      max-width:min(920px, 94vw);
+      background:rgba(10,12,16,0.72);
+      border:1px solid rgba(255,255,255,0.12);
+      border-radius:14px;
+      padding:12px 14px;
+      font-family: ui-sans-serif, system-ui;
+      color:#d7dee6;
+      display:none;
+      z-index:10;
+      pointer-events:none;
+    }
+    #crosshair{
+      position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+      width:14px; height:14px; z-index:10; pointer-events:none;
+      opacity:0.9;
+    }
+    #crosshair:before,#crosshair:after{
+      content:""; position:absolute; left:50%; top:50%; background:#d7dee6;
+      transform:translate(-50%,-50%);
+    }
+    #crosshair:before{ width:14px; height:2px; }
+    #crosshair:after{ width:2px; height:14px; }
+    #overlay{
+      position:fixed; inset:0; display:grid; place-items:center;
+      background:rgba(0,0,0,0.55);
+      z-index:20;
+      font-family: ui-sans-serif, system-ui;
+      color:#d7dee6;
+    }
+    #card{
+      width:min(820px, 92vw);
+      background:rgba(15,18,23,0.9);
+      border:1px solid rgba(255,255,255,0.12);
+      border-radius:16px;
+      padding:18px;
+      box-shadow:0 20px 70px rgba(0,0,0,0.6);
+    }
+    #card h1{ margin:0 0 8px; font-size:26px; }
+    #card p{ margin:8px 0; color:#aab9cc; line-height:1.35; }
+    #card ul{ margin:10px 0 0 18px; color:#aab9cc; }
+    #btn{
+      margin-top:14px;
+      display:inline-block;
+      padding:10px 12px;
+      border-radius:12px;
+      background:#1b2433;
+      border:1px solid rgba(255,255,255,0.14);
+      color:#d7dee6;
+      font-weight:700;
+      cursor:pointer;
+      pointer-events:auto;
+    }
+    #btn:hover{ filter:brightness(1.1); }
+    canvas{ display:block; }
   </style>
 </head>
 <body>
-  <div id="wrap">
-    <div id="hud">
-      <div class="pill"><b>WASD</b> move · <b>Mouse</b> aim · <b>Left/Right click</b> left/right hand · <b>R</b> retract</div>
-      <div class="pill" id="status">Loading…</div>
-    </div>
-    <canvas id="canvas"></canvas>
-    <div id="help">
-      <b>Goal:</b> solve 3 simple grab-pack puzzles. The “monster” is only hinted at until the final chase.
-      <br/>Tip: If you get stuck, look for <i>vents, glass panels, and unreachable switches</i>.
+  <div id="hud">
+    <div class="pill"><b>WASD</b> move · <b>Shift</b> sprint · <b>Mouse</b> look · <b>Left/Right Click</b> hands · <b>R</b> retract · <b>E</b> interact</div>
+    <div class="pill" id="status">Explore: 0/3</div>
+  </div>
+  <div id="msg"></div>
+  <div id="crosshair"></div>
+
+  <div id="overlay">
+    <div id="card">
+      <h1>3D Grab‑Pack Puzzle Chase (Starter)</h1>
+      <p>This is an original 3D mini‑game scaffold (not using any Poppy assets). You solve 3 grab‑pack puzzles; the “monster” only appears in the final chase.</p>
+      <ul>
+        <li><b>Puzzle A</b>: pull a lever through a vent with a hand</li>
+        <li><b>Puzzle B</b>: drag a crate onto a pressure plate</li>
+        <li><b>Puzzle C</b>: tap power nodes in order 1→2→3</li>
+      </ul>
+      <div id="btn">Click to Start (Pointer Lock)</div>
+      <p style="margin-top:10px; font-size:13px;">If your mouse won’t look around, click the game and accept pointer lock.</p>
     </div>
   </div>
 
-<script>
-(() => {
-  // =============================
-  // 1) Tiny engine helpers
-  // =============================
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
+  <!-- Three.js via CDN (works hosted). For offline you’d download these files. -->
+  <script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+    import { PointerLockControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/PointerLockControls.js';
 
-  // Make the game embed-friendly: canvas auto-fits its container (iframe or normal page)
-  function resizeCanvas(){
-    const r = canvas.getBoundingClientRect();
-    const dpr = Math.max(1, window.devicePixelRatio || 1);
-    // Avoid 0 sizes in hidden iframes
-    const w = Math.max(320, Math.floor(r.width));
-    const h = Math.max(240, Math.floor(r.height));
-    canvas.width = Math.floor(w * dpr);
-    canvas.height = Math.floor(h * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-  window.addEventListener('resize', resizeCanvas);
-  // Call once now, and again next frame (some embeds report size late)
-  resizeCanvas();
-  requestAnimationFrame(resizeCanvas);
-  const statusEl = document.getElementById('status');
+    // =============================
+    // 0) Tiny UI helpers
+    // =============================
+    const statusEl = document.getElementById('status');
+    const msgEl = document.getElementById('msg');
+    const overlay = document.getElementById('overlay');
+    const btn = document.getElementById('btn');
 
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const len = (x, y) => Math.hypot(x, y);
-  const norm = (x, y) => {
-    const l = Math.hypot(x, y) || 1;
-    return { x: x / l, y: y / l };
-  };
-  const lerp = (a, b, t) => a + (b - a) * t;
-  const rectsOverlap = (a, b) => !(a.x+a.w<b.x || a.x>b.x+b.w || a.y+a.h<b.y || a.y>b.y+b.h);
-
-  function drawText(x, y, text, size=16, alpha=1, align='left'){
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = '#d7dee6';
-    ctx.font = `600 ${size}px ui-sans-serif, system-ui`;
-    ctx.textAlign = align;
-    ctx.fillText(text, x, y);
-    ctx.restore();
-  }
-
-  // =============================
-  // 2) Input
-  // =============================
-  const keys = new Set();
-  const mouse = { x: 0, y: 0, downL: false, downR: false, justL: false, justR: false };
-
-  window.addEventListener('keydown', e => {
-    keys.add(e.key.toLowerCase());
-    if (['w','a','s','d','r',' '].includes(e.key.toLowerCase())) e.preventDefault();
-  });
-  window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
-
-  canvas.addEventListener('mousemove', e => {
-    const r = canvas.getBoundingClientRect();
-    mouse.x = (e.clientX - r.left) * (canvas.width / r.width);
-    mouse.y = (e.clientY - r.top) * (canvas.height / r.height);
-  });
-  canvas.addEventListener('mousedown', e => {
-    if (e.button === 0) { mouse.downL = true; mouse.justL = true; }
-    if (e.button === 2) { mouse.downR = true; mouse.justR = true; }
-  });
-  canvas.addEventListener('mouseup', e => {
-    if (e.button === 0) mouse.downL = false;
-    if (e.button === 2) mouse.downR = false;
-  });
-  canvas.addEventListener('contextmenu', e => e.preventDefault());
-
-  // =============================
-  // 3) Game data
-  // =============================
-  const game = {
-    t: 0,
-    dt: 0,
-    state: 'TITLE', // TITLE -> EXPLORE -> CHASE -> WIN
-    fade: 1,
-    msg: { text:'', until:0 },
-    camera: { x:0, y:0 },
-    solved: { lever:false, plate:false, power:false },
-    hintsSeen: 0,
-    chaseStartedAt: null,
-    winAt: null,
-  };
-
-  // Simple top-down map: walls are rectangles. Rooms connected by corridors.
-  const walls = [
-    // Outer bounds
-    {x:80,y:80,w:1120,h:20},{x:80,y:620,w:1120,h:20},{x:80,y:100,w:20,h:520},{x:1180,y:100,w:20,h:520},
-
-    // Internal partitions (three puzzle wings)
-    {x:520,y:100,w:20,h:250}, // wall between start hall and lever wing
-    {x:520,y:410,w:20,h:230},
-
-    {x:840,y:100,w:20,h:300}, // wall between hall and plate wing
-    {x:840,y:470,w:20,h:170},
-
-    // Glass observation room (monster hint area)
-    {x:260,y:310,w:260,h:20},{x:260,y:310,w:20,h:200},{x:500,y:310,w:20,h:200},{x:260,y:490,w:260,h:20},
-
-    // Power wing maze-ish
-    {x:860,y:290,w:160,h:20},{x:860,y:290,w:20,h:200},{x:1000,y:290,w:20,h:200},{x:860,y:470,w:160,h:20},
-  ];
-
-  const doors = {
-    leverDoor: { x:520,y:330,w:20,h:80, open:false },
-    plateDoor: { x:840,y:400,w:20,h:80, open:false },
-    finalDoor: { x:1080,y:300,w:20,h:140, open:false },
-  };
-
-  // Interactables
-  const lever = {
-    id:'lever',
-    // behind glass; player can't reach directly
-    box: {x:360,y:360,w:50,h:20},
-    pulled:false,
-    // arm can reach it through a "gap" region
-    armTarget: {x:385,y:370,r:28},
-  };
-
-  const crate = {
-    id:'crate',
-    box: {x:930,y:520,w:60,h:60},
-    vel: {x:0,y:0},
-    heldBy: null,
-  };
-
-  const plate = {
-    id:'plate',
-    box: {x:960,y:300,w:90,h:20},
-    pressed:false,
-  };
-
-  const power = {
-    nodes: [
-      {x:920,y:160,r:14, on:false},
-      {x:1050,y:200,r:14, on:false},
-      {x:980,y:240,r:14, on:false},
-    ],
-    order: 0,
-    solved:false,
-  };
-
-  const hintObjects = [
-    {x:300,y:210,w:160,h:60, type:'note', text:"A note: 'If you hear dragging... don't look for it.'"},
-    {x:360,y:520,w:80,h:40, type:'shadow'},
-    {x:280,y:340,w:220,h:150, type:'glass'},
-  ];
-
-  // Final exit (only usable after all puzzles)
-  const exitZone = { x:1100,y:330,w:80,h:80 };
-
-  // Player
-  const player = {
-    x: 180, y: 360,
-    r: 16,
-    speed: 210,
-    hp: 1,
-  };
-
-  // The monster: not drawn in EXPLORE. Only appears in CHASE.
-  const monster = {
-    x: 1140, y: 580,
-    r: 22,
-    speed: 245,
-    active: false,
-  };
-
-  // Grab-pack hands (two independent tethers)
-  function makeHand(side){
-    return {
-      side,
-      state: 'READY', // READY -> FLY -> LATCH -> RETRACT
-      originOffset: side === 'L' ? {x:-10,y:-6} : {x:10,y:-6},
-      tip: {x:player.x, y:player.y},
-      vel: {x:0,y:0},
-      maxLen: 260,
-      speed: 820,
-      latchedTo: null, // object id
-      latchPoint: null,
-      pullStrength: 380,
+    const say = (text, seconds=3) => {
+      if (!text){ msgEl.style.display = 'none'; return; }
+      msgEl.textContent = text;
+      msgEl.style.display = 'block';
+      clearTimeout(say._t);
+      say._t = setTimeout(() => { msgEl.style.display = 'none'; }, seconds*1000);
     };
-  }
-  const handL = makeHand('L');
-  const handR = makeHand('R');
 
-  // =============================
-  // 4) Setup & messages
-  // =============================
-  function setStatus(text){
-    statusEl.textContent = text;
-  }
-  function say(text, seconds=3){
-    game.msg.text = text;
-    game.msg.until = game.t + seconds;
-  }
+    // =============================
+    // 1) Renderer / Scene / Camera
+    // =============================
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.max(1, window.devicePixelRatio || 1));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0x06070a);
+    document.body.appendChild(renderer.domElement);
 
-  setStatus('Click to start');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x06070a, 4, 32);
 
-  canvas.addEventListener('click', () => {
-    if (game.state === 'TITLE'){
-      game.state = 'EXPLORE';
-      game.fade = 1;
-      say('Find three locks: LEVER, PLATE, POWER.', 3.2);
-      setStatus('Explore: 0/3 solved');
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.05, 120);
+    camera.position.set(0, 1.6, 6);
+
+    const controls = new PointerLockControls(camera, renderer.domElement);
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Lights
+    scene.add(new THREE.HemisphereLight(0x9db0c5, 0x0b0c10, 0.7));
+    const key = new THREE.DirectionalLight(0xffffff, 0.8);
+    key.position.set(6, 10, 4);
+    scene.add(key);
+
+    // =============================
+    // 2) Materials (simple “factory” look)
+    // =============================
+    const matWall = new THREE.MeshStandardMaterial({ color: 0x161b24, roughness: 0.95, metalness: 0.1 });
+    const matFloor = new THREE.MeshStandardMaterial({ color: 0x0a0c10, roughness: 1.0, metalness: 0.0 });
+    const matDoorClosed = new THREE.MeshStandardMaterial({ color: 0xe35b5b, roughness: 0.6, metalness: 0.1 });
+    const matDoorOpen = new THREE.MeshStandardMaterial({ color: 0x51e39a, roughness: 0.6, metalness: 0.1, transparent:true, opacity:0.25 });
+    const matInteract = new THREE.MeshStandardMaterial({ color: 0xf7c948, roughness: 0.5, metalness: 0.15 });
+    const matCrate = new THREE.MeshStandardMaterial({ color: 0x273042, roughness: 0.9, metalness: 0.05 });
+    const matGlass = new THREE.MeshStandardMaterial({ color: 0x9dd6ff, roughness: 0.05, metalness: 0.0, transparent:true, opacity:0.12 });
+
+    // =============================
+    // 3) World building helpers
+    // =============================
+    const colliders = []; // invisible boxes for collision
+    const interactables = []; // raycast targets
+
+    function addBox({x,y,z,w,h,d, material, collider=true, interactable=false, name=''}){
+      const geo = new THREE.BoxGeometry(w,h,d);
+      const mesh = new THREE.Mesh(geo, material);
+      mesh.position.set(x,y,z);
+      mesh.name = name;
+      scene.add(mesh);
+      if (collider){
+        const box = new THREE.Box3().setFromObject(mesh);
+        colliders.push({ mesh, box });
+      }
+      if (interactable){
+        mesh.userData.interactable = true;
+        interactables.push(mesh);
+      }
+      return mesh;
     }
-  }, { once:false });
 
-  // =============================
-  // 5) Collision & movement
-  // =============================
-  function circleRectCollide(cx, cy, r, rect){
-    const closestX = clamp(cx, rect.x, rect.x+rect.w);
-    const closestY = clamp(cy, rect.y, rect.y+rect.h);
-    const dx = cx - closestX;
-    const dy = cy - closestY;
-    return (dx*dx + dy*dy) < (r*r);
-  }
-
-  function tryMove(dx, dy){
-    let nx = player.x + dx;
-    let ny = player.y + dy;
-
-    // collide with walls
-    for (const w of walls){
-      if (circleRectCollide(nx, ny, player.r, w)){
-        // resolve simple: try axis separation
-        if (!circleRectCollide(player.x + dx, player.y, player.r, w)) ny = player.y;
-        else if (!circleRectCollide(player.x, player.y + dy, player.r, w)) nx = player.x;
-        else { nx = player.x; ny = player.y; }
+    function updateColliderBoxes(){
+      for (const c of colliders){
+        c.box.setFromObject(c.mesh);
       }
     }
 
-    // collide with doors if closed
-    for (const k of Object.keys(doors)){
-      const d = doors[k];
-      if (!d.open && circleRectCollide(nx, ny, player.r, d)){
-        nx = player.x;
-        ny = player.y;
+    // Floor
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(60,60), matFloor);
+    floor.rotation.x = -Math.PI/2;
+    scene.add(floor);
+
+    // Map layout in 3D (simple rooms/corridors)
+    // Coordinates are x,z on floor. y is height.
+
+    // Outer walls
+    addBox({x:0,y:1.5,z:0,w:26,h:3,d:0.4,material:matWall}); // back
+    addBox({x:0,y:1.5,z:12,w:26,h:3,d:0.4,material:matWall}); // front
+    addBox({x:-13,y:1.5,z:6,w:0.4,h:3,d:24,material:matWall}); // left
+    addBox({x:13,y:1.5,z:6,w:0.4,h:3,d:24,material:matWall}); // right
+
+    // Interior dividers to make 3 wings
+    addBox({x:-3,y:1.5,z:6,w:0.4,h:3,d:10,material:matWall});
+    addBox({x:5,y:1.5,z:6,w:0.4,h:3,d:10,material:matWall});
+
+    // Glass observation room (for hints)
+    addBox({x:-8,y:1.5,z:7.5,w:6,h:3,d:0.25,material:matGlass, collider:false});
+    addBox({x:-11,y:1.5,z:9,w:0.25,h:3,d:3,material:matGlass, collider:false});
+    addBox({x:-5,y:1.5,z:9,w:0.25,h:3,d:3,material:matGlass, collider:false});
+
+    // Doors (A, B, EXIT)
+    const doorA = addBox({x:-3,y:1.2,z:2.2,w:0.35,h:2.4,d:1.4,material:matDoorClosed, collider:true, interactable:false, name:'doorA'});
+    const doorB = addBox({x:5,y:1.2,z:2.2,w:0.35,h:2.4,d:1.4,material:matDoorClosed, collider:true, interactable:false, name:'doorB'});
+    const doorExit = addBox({x:11.6,y:1.2,z:6.0,w:0.35,h:2.4,d:2.4,material:matDoorClosed, collider:true, interactable:false, name:'doorExit'});
+
+    const doors = {
+      A: { mesh: doorA, open:false },
+      B: { mesh: doorB, open:false },
+      EXIT: { mesh: doorExit, open:false },
+    };
+
+    function setDoor(keyName, isOpen){
+      const d = doors[keyName];
+      d.open = isOpen;
+      d.mesh.material = isOpen ? matDoorOpen : matDoorClosed;
+      // If open, remove collider effect by marking collider false-ish: we’ll keep box but ignore in collision
+      d.mesh.userData.open = isOpen;
+    }
+
+    // =============================
+    // 4) Player movement + collision
+    // =============================
+    const keys = new Set();
+    window.addEventListener('keydown', (e)=>keys.add(e.key.toLowerCase()));
+    window.addEventListener('keyup', (e)=>keys.delete(e.key.toLowerCase()));
+
+    const player = {
+      radius: 0.35,
+      height: 1.6,
+      vel: new THREE.Vector3(),
+      speed: 3.2,
+      sprint: 5.0,
+    };
+
+    // Simple capsule-like collision approximation: check camera position against collider boxes in XZ
+    function resolveCollision(pos){
+      const p = pos.clone();
+      for (const c of colliders){
+        // Skip open doors
+        if (c.mesh.userData.open) continue;
+        c.box.setFromObject(c.mesh);
+
+        // Shrink test to XZ
+        const min = c.box.min;
+        const max = c.box.max;
+        const closestX = Math.max(min.x, Math.min(p.x, max.x));
+        const closestZ = Math.max(min.z, Math.min(p.z, max.z));
+        const dx = p.x - closestX;
+        const dz = p.z - closestZ;
+        const dist2 = dx*dx + dz*dz;
+        const r = player.radius;
+        if (dist2 < r*r){
+          const dist = Math.sqrt(dist2) || 0.0001;
+          const push = (r - dist);
+          p.x += (dx/dist) * push;
+          p.z += (dz/dist) * push;
+        }
+      }
+      return p;
+    }
+
+    // =============================
+    // 5) Grab‑Pack hands (raycast + tether visuals)
+    // =============================
+    const raycaster = new THREE.Raycaster();
+
+    function makeHand(side){
+      const color = side==='L' ? 0x4aa3ff : 0xff4a7a;
+      const lineMat = new THREE.LineBasicMaterial({ color, transparent:true, opacity:0.9 });
+      const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+      const line = new THREE.Line(lineGeo, lineMat);
+      scene.add(line);
+
+      const tip = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 12), new THREE.MeshStandardMaterial({ color }));
+      scene.add(tip);
+
+      return {
+        side,
+        state: 'READY', // READY -> FLY -> LATCH -> RETRACT
+        maxDist: 6.5,
+        speed: 18,
+        origin: new THREE.Vector3(),
+        tip: tip.position,
+        line,
+        lineGeo,
+        latched: null, // object
+        latchPoint: new THREE.Vector3(),
+        t: 0,
+      };
+    }
+
+    const handL = makeHand('L');
+    const handR = makeHand('R');
+
+    function handOrigin(out){
+      // Offset from camera (like a backpack mount)
+      const right = new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion);
+      const up = new THREE.Vector3(0,1,0);
+      const fwd = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+      const side = out === handL ? -1 : 1;
+      return camera.position.clone()
+        .add(right.multiplyScalar(0.18 * side))
+        .add(up.multiplyScalar(-0.12))
+        .add(fwd.multiplyScalar(0.22));
+    }
+
+    function fireHand(hand){
+      if (state !== 'EXPLORE' && state !== 'CHASE') return;
+      if (hand.state !== 'READY') return;
+
+      const o = handOrigin(hand);
+      hand.origin.copy(o);
+      hand.tip.copy(o);
+      hand.t = 0;
+      hand.latched = null;
+
+      // Raycast from center crosshair
+      raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+      const hits = raycaster.intersectObjects(interactables, false);
+      const target = hits.length ? hits[0] : null;
+
+      if (target && target.distance <= hand.maxDist){
+        // Fly to hit point, then latch
+        hand.state = 'FLY';
+        hand.latchPoint.copy(target.point);
+        hand.latched = target.object;
+      } else {
+        // Fly to max distance point in view direction
+        hand.state = 'FLY';
+        const dir = raycaster.ray.direction.clone();
+        hand.latchPoint.copy(o).add(dir.multiplyScalar(hand.maxDist));
+        hand.latched = null;
       }
     }
 
-    player.x = nx;
-    player.y = ny;
-  }
+    function retractHand(hand){
+      hand.state = 'RETRACT';
+      hand.latched = null;
+    }
 
-  // =============================
-  // 6) Grab-pack logic
-  // =============================
-  function handOrigin(hand){
-    return { x: player.x + hand.originOffset.x, y: player.y + hand.originOffset.y };
-  }
+    function updateHand(hand, dt){
+      const o = handOrigin(hand);
+      hand.origin.copy(o);
 
-  function retract(hand){
-    hand.state = 'RETRACT';
-    hand.latchedTo = null;
-    hand.latchPoint = null;
-  }
-
-  function fire(hand){
-    if (hand.state !== 'READY') return;
-
-    const o = handOrigin(hand);
-    const dir = norm(mouse.x - o.x, mouse.y - o.y);
-    hand.tip.x = o.x;
-    hand.tip.y = o.y;
-    hand.vel.x = dir.x * hand.speed;
-    hand.vel.y = dir.y * hand.speed;
-    hand.state = 'FLY';
-  }
-
-  function handLength(hand){
-    const o = handOrigin(hand);
-    return len(hand.tip.x - o.x, hand.tip.y - o.y);
-  }
-
-  function updateHand(hand, dt){
-    const o = handOrigin(hand);
-
-    if (hand.state === 'FLY'){
-      hand.tip.x += hand.vel.x * dt;
-      hand.tip.y += hand.vel.y * dt;
-
-      // stop at max length
-      if (handLength(hand) > hand.maxLen){
-        retract(hand);
-        return;
+      if (hand.state === 'READY'){
+        hand.tip.copy(o);
       }
 
-      // latch to lever target (only way is through the small reach target)
-      const dl = len(hand.tip.x - lever.armTarget.x, hand.tip.y - lever.armTarget.y);
-      if (!lever.pulled && dl < lever.armTarget.r){
-        hand.state = 'LATCH';
-        hand.latchedTo = 'lever';
-        hand.latchPoint = { x: lever.armTarget.x, y: lever.armTarget.y };
-        say('Hand latched: pull to flip the lever.', 2.2);
-        return;
-      }
-
-      // latch to crate
-      if (rectPoint(crate.box, hand.tip.x, hand.tip.y)){
-        hand.state = 'LATCH';
-        hand.latchedTo = 'crate';
-        hand.latchPoint = { x: hand.tip.x, y: hand.tip.y };
-        crate.heldBy = hand.side;
-        return;
-      }
-
-      // latch to power nodes (tap in order)
-      if (!power.solved){
-        for (let i=0;i<power.nodes.length;i++){
-          const n = power.nodes[i];
-          const dn = len(hand.tip.x - n.x, hand.tip.y - n.y);
-          if (dn < n.r + 8){
-            // only accept correct next node
-            if (i === power.order){
-              n.on = true;
-              power.order++;
-              say('Power node connected.', 1.4);
-              if (power.order >= power.nodes.length){
-                power.solved = true;
-                game.solved.power = true;
-                doors.finalDoor.open = (game.solved.lever && game.solved.plate && game.solved.power);
-                say('Power restored. Something woke up…', 2.8);
-              }
-            } else {
-              // reset if wrong
-              power.order = 0;
-              for (const nn of power.nodes) nn.on = false;
-              say('Sequence reset.', 1.4);
-            }
-            retract(hand);
-            return;
+      if (hand.state === 'FLY'){
+        hand.t = Math.min(1, hand.t + dt * 6);
+        hand.tip.lerpVectors(o, hand.latchPoint, hand.t);
+        if (hand.t >= 1){
+          // If latched to something interactable, latch
+          if (hand.latched){
+            hand.state = 'LATCH';
+          } else {
+            hand.state = 'RETRACT';
           }
         }
       }
 
-      // otherwise retract if hits a wall
-      for (const w of walls){
-        if (rectPoint(w, hand.tip.x, hand.tip.y)){
-          retract(hand);
-          return;
+      if (hand.state === 'LATCH'){
+        // Keep tip at latch point
+        hand.tip.copy(hand.latchPoint);
+
+        // Special behaviors based on latched object name
+        const obj = hand.latched;
+        if (!obj) { hand.state = 'RETRACT'; }
+      }
+
+      if (hand.state === 'RETRACT'){
+        hand.tip.lerp(o, Math.min(1, dt*14));
+        if (hand.tip.distanceTo(o) < 0.12){
+          hand.state = 'READY';
+          hand.tip.copy(o);
         }
       }
+
+      // Update line geometry
+      const pts = [hand.origin.clone(), hand.tip.clone()];
+      hand.lineGeo.setFromPoints(pts);
+      hand.lineGeo.computeBoundingSphere();
     }
 
-    if (hand.state === 'LATCH'){
-      // Keep tip at latch point
-      if (hand.latchedTo === 'lever'){
-        hand.tip.x = lever.armTarget.x;
-        hand.tip.y = lever.armTarget.y;
+    window.addEventListener('mousedown', (e)=>{
+      if (e.button===0) fireHand(handL);
+      if (e.button===2) fireHand(handR);
+    });
+    window.addEventListener('contextmenu', (e)=>e.preventDefault());
 
-        // Pulling mechanic: if player moves away enough, lever flips
-        const d = handLength(hand);
-        if (d > 180){
-          lever.pulled = true;
-          game.solved.lever = true;
-          doors.leverDoor.open = true;
-          say('Lever flipped. Door unlocked.', 2.4);
-          retract(hand);
+    // =============================
+    // 6) Puzzles (A lever, B plate, C power nodes)
+    // =============================
+    const solved = { A:false, B:false, C:false };
+
+    // A) Lever: behind a wall; only reachable through a “vent” gap area.
+    // We fake this by making the lever target interactable but placing it in a niche.
+    addBox({x:-9.4,y:1.2,z:9.0,w:6,h:2.4,d:0.4,material:matWall}); // back wall in left wing
+
+    // Vent frame (visual)
+    addBox({x:-7.8,y:1.3,z:8.75,w:1.4,h:0.8,d:0.18,material:matWall, collider:false});
+
+    // Lever target (interactable)
+    const lever = addBox({x:-7.8,y:1.3,z:8.6,w:0.22,h:0.22,d:0.22,material:matInteract, collider:false, interactable:true, name:'lever'});
+    lever.userData.kind = 'lever';
+
+    // B) Crate + Plate
+    const crate = addBox({x:7.6,y:0.5,z:10.2,w:0.8,h:0.8,d:0.8,material:matCrate, collider:true, interactable:true, name:'crate'});
+    crate.userData.kind = 'crate';
+
+    const plate = addBox({x:7.8,y:0.05,z:7.2,w:1.4,h:0.12,d:1.0,material:new THREE.MeshStandardMaterial({ color:0x2a3345, roughness:0.7, metalness:0.05 }), collider:false, interactable:false, name:'plate'});
+    plate.userData.pressed = false;
+
+    // C) Power nodes order 1->2->3
+    const powerNodes = [
+      { pos: new THREE.Vector3(9.5, 1.3, 2.8), on:false, idx:0 },
+      { pos: new THREE.Vector3(10.7,1.3, 4.0), on:false, idx:1 },
+      { pos: new THREE.Vector3(9.9, 1.3, 5.2), on:false, idx:2 },
+    ];
+    const nodeMeshes = powerNodes.map((n,i)=>{
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.18, 18, 14), new THREE.MeshStandardMaterial({ color:0x4a5873, roughness:0.4, metalness:0.2 }));
+      m.position.copy(n.pos);
+      m.userData.kind = 'node';
+      m.userData.nodeIndex = i;
+      m.userData.interactable = true;
+      scene.add(m);
+      interactables.push(m);
+      return m;
+    });
+    let nodeOrder = 0;
+
+    // Hint props (no monster shown)
+    const note = addBox({x:-10.8,y:1.1,z:4.0,w:0.8,h:0.8,d:0.05,material:new THREE.MeshStandardMaterial({ color:0xd7dee6, roughness:0.9, metalness:0.0 }), collider:false, interactable:true, name:'note'});
+    note.userData.kind = 'note';
+
+    const glassPanel = addBox({x:-8.0,y:1.5,z:7.5,w:6.2,h:2.6,d:0.06,material:matGlass, collider:false, interactable:false});
+
+    // Exit zone (a glowing rectangle on the floor)
+    const exitZone = new THREE.Mesh(new THREE.PlaneGeometry(2.4,2.4), new THREE.MeshStandardMaterial({ color:0x9dd6ff, transparent:true, opacity:0.18 }));
+    exitZone.rotation.x = -Math.PI/2;
+    exitZone.position.set(10.6, 0.01, 6.0);
+    scene.add(exitZone);
+
+    // =============================
+    // 7) Interaction + Grab behaviors
+    // =============================
+    function updateStatus(){
+      const n = Object.values(solved).filter(Boolean).length;
+      statusEl.textContent = (state==='CHASE') ? 'RUN!' : `Explore: ${n}/3`;
+      // Exit door opens only when all solved
+      const all = solved.A && solved.B && solved.C;
+      setDoor('EXIT', all);
+    }
+
+    // Carry/drag crate with a hand while latched
+    function pullCrateToward(hand, dt){
+      // Move crate toward hand tip with simple smoothing
+      const to = hand.tip.clone();
+      to.y = crate.position.y;
+      crate.position.lerp(to, Math.min(1, dt*5.5));
+    }
+
+    function pressPlateCheck(){
+      // Check crate over plate
+      const dx = Math.abs(crate.position.x - plate.position.x);
+      const dz = Math.abs(crate.position.z - plate.position.z);
+      const on = dx < 0.75 && dz < 0.55;
+      if (on && !solved.B){
+        solved.B = true;
+        plate.material.color.setHex(0x51e39a);
+        setDoor('B', true);
+        say('Plate pressed. Door B unlocked.', 2.2);
+        updateStatus();
+      }
+      plate.userData.pressed = on;
+    }
+
+    function doNodeTap(i){
+      if (solved.C) return;
+      if (i === nodeOrder){
+        nodeMeshes[i].material.color.setHex(0x51e39a);
+        nodeOrder++;
+        say('Power node connected.', 1.2);
+        if (nodeOrder >= nodeMeshes.length){
+          solved.C = true;
+          say('Power restored. Something woke up…', 2.6);
+          updateStatus();
         }
-      } else if (hand.latchedTo === 'crate'){
-        // If latched to crate, pulling moves crate toward player.
-        // (Very simple physics)
-        const cx = crate.box.x + crate.box.w/2;
-        const cy = crate.box.y + crate.box.h/2;
-        const dir = norm(o.x - cx, o.y - cy);
-        crate.vel.x += dir.x * hand.pullStrength * dt;
-        crate.vel.y += dir.y * hand.pullStrength * dt;
-        hand.tip.x = cx;
-        hand.tip.y = cy;
-
-        // If retract key pressed, release
-        if (keys.has('r')){
-          crate.heldBy = null;
-          retract(hand);
-        }
+      } else {
+        // reset
+        nodeOrder = 0;
+        for (const m of nodeMeshes) m.material.color.setHex(0x4a5873);
+        say('Sequence reset.', 1.2);
       }
     }
 
-    if (hand.state === 'RETRACT'){
-      // lerp tip back to origin
-      hand.tip.x = lerp(hand.tip.x, o.x, 12*dt);
-      hand.tip.y = lerp(hand.tip.y, o.y, 12*dt);
-      if (len(hand.tip.x - o.x, hand.tip.y - o.y) < 6){
-        hand.state = 'READY';
-        hand.tip.x = o.x;
-        hand.tip.y = o.y;
-      }
-    }
+    // Apply latch effects based on object
+    function applyLatchEffects(hand, dt){
+      if (hand.state !== 'LATCH' || !hand.latched) return;
+      const kind = hand.latched.userData.kind;
 
-    if (hand.state === 'READY'){
-      hand.tip.x = o.x;
-      hand.tip.y = o.y;
-    }
-  }
-
-  function rectPoint(rect, px, py){
-    return px >= rect.x && px <= rect.x+rect.w && py >= rect.y && py <= rect.y+rect.h;
-  }
-
-  // =============================
-  // 7) Puzzle checks
-  // =============================
-  function updateCrate(dt){
-    // friction
-    crate.vel.x *= Math.pow(0.0009, dt);
-    crate.vel.y *= Math.pow(0.0009, dt);
-
-    let nx = crate.box.x + crate.vel.x * dt;
-    let ny = crate.box.y + crate.vel.y * dt;
-
-    // collide with walls/doors
-    const test = {x:nx,y:ny,w:crate.box.w,h:crate.box.h};
-    let blocked = false;
-    for (const w of walls){
-      if (rectsOverlap(test, w)) blocked = true;
-    }
-    for (const k of Object.keys(doors)){
-      const d = doors[k];
-      if (!d.open && rectsOverlap(test, d)) blocked = true;
-    }
-    if (!blocked){
-      crate.box.x = nx;
-      crate.box.y = ny;
-    } else {
-      crate.vel.x *= -0.2;
-      crate.vel.y *= -0.2;
-    }
-
-    // Plate pressed?
-    if (!game.solved.plate){
-      plate.pressed = rectsOverlap(crate.box, plate.box);
-      if (plate.pressed){
-        game.solved.plate = true;
-        doors.plateDoor.open = true;
-        say('Plate pressed. Door unlocked.', 2.2);
-      }
-    }
-  }
-
-  function updateDoors(){
-    // Final door only opens once all solved
-    doors.finalDoor.open = (game.solved.lever && game.solved.plate && game.solved.power);
-    const solvedCount = Object.values(game.solved).filter(Boolean).length;
-    setStatus(game.state === 'CHASE' ? 'RUN!' : `Explore: ${solvedCount}/3 solved`);
-  }
-
-  // =============================
-  // 8) Monster & chase
-  // =============================
-  function startChase(){
-    if (game.state !== 'EXPLORE') return;
-    game.state = 'CHASE';
-    monster.active = true;
-    game.chaseStartedAt = game.t;
-    say('DON’T LOOK BACK. GET TO THE EXIT.', 3.2);
-  }
-
-  function updateMonster(dt){
-    if (!monster.active) return;
-
-    // Simple pursuit AI
-    const dir = norm(player.x - monster.x, player.y - monster.y);
-    monster.x += dir.x * monster.speed * dt;
-    monster.y += dir.y * monster.speed * dt;
-
-    // Don’t go through walls/doors (rough)
-    for (const w of walls){
-      if (circleRectCollide(monster.x, monster.y, monster.r, w)){
-        monster.x -= dir.x * monster.speed * dt;
-        monster.y -= dir.y * monster.speed * dt;
-        break;
-      }
-    }
-
-    for (const k of Object.keys(doors)){
-      const d = doors[k];
-      if (!d.open && circleRectCollide(monster.x, monster.y, monster.r, d)){
-        monster.x -= dir.x * monster.speed * dt;
-        monster.y -= dir.y * monster.speed * dt;
-        break;
-      }
-    }
-
-    // Catch check
-    if (len(player.x - monster.x, player.y - monster.y) < player.r + monster.r - 2){
-      // Soft "caught" restart
-      say('Caught. Resetting…', 2.0);
-      resetToExplore();
-    }
-  }
-
-  function resetToExplore(){
-    game.state = 'EXPLORE';
-    monster.active = false;
-    monster.x = 1140; monster.y = 580;
-    player.x = 180; player.y = 360;
-    retract(handL); retract(handR);
-    // Keep puzzles solved so user doesn't get stuck repeating.
-    say('The building is louder now…', 2.4);
-  }
-
-  // =============================
-  // 9) Hints (no monster visible)
-  // =============================
-  function updateHints(){
-    if (game.state !== 'EXPLORE') return;
-
-    // Trigger subtle hints when near certain areas.
-    for (const h of hintObjects){
-      const near = rectsOverlap({x:player.x-18,y:player.y-18,w:36,h:36}, h);
-      if (near && h.type === 'note'){
-        if (game.hintsSeen < 1){
-          say(h.text, 3.5);
-          game.hintsSeen = 1;
+      if (kind === 'lever'){
+        // If player backs away while latched, lever flips
+        const dist = hand.origin.distanceTo(hand.tip);
+        if (dist > 4.8 && !solved.A){
+          solved.A = true;
+          lever.material.color.setHex(0x51e39a);
+          setDoor('A', true);
+          say('Lever pulled. Door A unlocked.', 2.2);
+          updateStatus();
+          retractHand(hand);
         }
       }
-      if (near && h.type === 'glass'){
-        if (game.hintsSeen < 2){
-          say("Behind the glass: something moved… maybe just your eyes.", 3.2);
-          game.hintsSeen = 2;
+
+      if (kind === 'crate'){
+        pullCrateToward(hand, dt);
+      }
+
+      if (kind === 'node'){
+        doNodeTap(hand.latched.userData.nodeIndex);
+        retractHand(hand);
+      }
+
+      if (kind === 'note'){
+        say("A note: 'If you hear dragging… don’t look for it.'", 3.2);
+        retractHand(hand);
+      }
+    }
+
+    // When hand finishes flying, convert to latch on actual hit object
+    function tryFinalizeLatch(hand){
+      if (hand.state !== 'FLY' || hand.t < 1) return;
+      // If we targeted an interactable, keep latched; else retract
+      if (hand.latched){
+        // Recompute latch point to the object’s current position if it’s a crate
+        if (hand.latched.userData.kind === 'crate'){
+          hand.latchPoint.copy(crate.position);
+          hand.latchPoint.y = crate.position.y + 0.1;
+        }
+        hand.state = 'LATCH';
+      } else {
+        hand.state = 'RETRACT';
+      }
+    }
+
+    // Retract key
+    window.addEventListener('keydown', (e)=>{
+      if (e.key.toLowerCase()==='r') { retractHand(handL); retractHand(handR); }
+    });
+
+    // =============================
+    // 8) Monster (ONLY in final chase)
+    // =============================
+    const monster = new THREE.Mesh(
+      new THREE.SphereGeometry(0.55, 22, 16),
+      new THREE.MeshStandardMaterial({ color: 0x0b0c0f, roughness: 0.6, metalness: 0.0 })
+    );
+    monster.visible = false;
+    monster.position.set(11.0, 0.55, 11.2);
+    scene.add(monster);
+
+    const monsterData = {
+      active:false,
+      speed: 4.2,
+    };
+
+    function startChase(){
+      if (state !== 'EXPLORE') return;
+      state = 'CHASE';
+      monster.visible = true;
+      monsterData.active = true;
+      say('DON’T LOOK BACK. GET TO THE EXIT.', 3.0);
+      updateStatus();
+    }
+
+    function updateMonster(dt){
+      if (!monsterData.active) return;
+      const toPlayer = new THREE.Vector3().subVectors(camera.position, monster.position);
+      toPlayer.y = 0;
+      const dist = toPlayer.length();
+      if (dist > 0.001) toPlayer.normalize();
+      monster.position.add(toPlayer.multiplyScalar(monsterData.speed * dt));
+
+      // Collision-ish: keep monster inside bounds by clamping a bit
+      monster.position.x = THREE.MathUtils.clamp(monster.position.x, -12.0, 12.0);
+      monster.position.z = THREE.MathUtils.clamp(monster.position.z, 0.6, 11.6);
+
+      // Catch
+      const dx = monster.position.x - camera.position.x;
+      const dz = monster.position.z - camera.position.z;
+      if ((dx*dx + dz*dz) < (0.75*0.75)){
+        // Soft reset (no graphic violence)
+        say('Caught. Resetting…', 2.0);
+        resetToExplore(true);
+      }
+    }
+
+    function resetToExplore(keepSolved=true){
+      state = 'EXPLORE';
+      monsterData.active = false;
+      monster.visible = false;
+      monster.position.set(11.0, 0.55, 11.2);
+      camera.position.set(0, 1.6, 6);
+      player.vel.set(0,0,0);
+      retractHand(handL); retractHand(handR);
+      if (!keepSolved){
+        solved.A = solved.B = solved.C = false;
+        nodeOrder = 0;
+        lever.material.color.setHex(0xf7c948);
+        plate.material.color.setHex(0x2a3345);
+        for (const m of nodeMeshes) m.material.color.setHex(0x4a5873);
+        setDoor('A', false); setDoor('B', false); setDoor('EXIT', false);
+      }
+      say('The building is louder now…', 2.2);
+      updateStatus();
+    }
+
+    // =============================
+    // 9) Game state & win
+    // =============================
+    let state = 'TITLE'; // TITLE -> EXPLORE -> CHASE -> WIN
+
+    function checkHints(){
+      if (state !== 'EXPLORE') return;
+
+      // Hint 1: glass “movement” line (text only)
+      const nearGlass = camera.position.distanceTo(new THREE.Vector3(-8,1.6,7.5)) < 2.2;
+      if (nearGlass && !checkHints._glass){
+        checkHints._glass = true;
+        say('Behind the glass: something moved… maybe just your eyes.', 3.0);
+      }
+
+      // Hint 2: “shadow” (text only)
+      const nearShadow = camera.position.distanceTo(new THREE.Vector3(-2,1.6,10.8)) < 2.0;
+      if (nearShadow && !checkHints._shadow){
+        checkHints._shadow = true;
+        say('A shadow slides along the floor, then stops.', 2.8);
+      }
+
+      // Start chase only when all puzzles solved and you approach the EXIT door area
+      const all = solved.A && solved.B && solved.C;
+      if (all){
+        const nearExitDoor = camera.position.distanceTo(new THREE.Vector3(11.0,1.6,6.0)) < 2.1;
+        if (nearExitDoor && state==='EXPLORE') startChase();
+      }
+    }
+
+    function checkWin(){
+      if (state !== 'CHASE') return;
+      const dx = camera.position.x - exitZone.position.x;
+      const dz = camera.position.z - exitZone.position.z;
+      if ((dx*dx + dz*dz) < (1.15*1.15)){
+        state = 'WIN';
+        monsterData.active = false;
+        monster.visible = false;
+        overlay.style.display = 'grid';
+        document.getElementById('card').innerHTML = `
+          <h1>YOU ESCAPED</h1>
+          <p>Nice. Want me to add a second level, sound, and a scarier chase pathing?</p>
+          <div id="btn">Play Again</div>
+        `;
+        const b = document.getElementById('btn');
+        b.addEventListener('click', ()=>{
+          overlay.style.display = 'none';
+          resetToExplore(true);
+        });
+      }
+    }
+
+    // =============================
+    // 10) Start button / pointer lock
+    // =============================
+    btn.addEventListener('click', () => {
+      controls.lock();
+    });
+
+    controls.addEventListener('lock', () => {
+      overlay.style.display = 'none';
+      if (state === 'TITLE'){
+        state = 'EXPLORE';
+        say('Find three locks: LEVER, PLATE, POWER.', 3.2);
+        updateStatus();
+      }
+    });
+
+    controls.addEventListener('unlock', () => {
+      // Show overlay pause
+      if (state !== 'WIN') overlay.style.display = 'grid';
+    });
+
+    // =============================
+    // 11) Animation loop
+    // =============================
+    const clock = new THREE.Clock();
+
+    function animate(){
+      const dt = Math.min(0.033, clock.getDelta());
+
+      // Movement
+      if (controls.isLocked && (state==='EXPLORE' || state==='CHASE')){
+        const forward = new THREE.Vector3();
+        camera.getWorldDirection(forward);
+        forward.y = 0; forward.normalize();
+        const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0,1,0)).multiplyScalar(-1).normalize();
+
+        const speed = keys.has('shift') ? player.sprint : player.speed;
+        const wish = new THREE.Vector3();
+        if (keys.has('w')) wish.add(forward);
+        if (keys.has('s')) wish.add(forward.clone().multiplyScalar(-1));
+        if (keys.has('a')) wish.add(right.clone().multiplyScalar(-1));
+        if (keys.has('d')) wish.add(right);
+        if (wish.lengthSq() > 0){
+          wish.normalize().multiplyScalar(speed * dt);
+          const next = camera.position.clone().add(new THREE.Vector3(wish.x, 0, wish.z));
+          const resolved = resolveCollision(next);
+          camera.position.copy(resolved);
         }
       }
-      if (near && h.type === 'shadow'){
-        if (game.hintsSeen < 3){
-          say("A shadow slides along the floor, then stops.", 3.0);
-          game.hintsSeen = 3;
-        }
-      }
-    }
 
-    // After all puzzles solved, opening final door triggers the chase.
-    if (doors.finalDoor.open){
-      // As soon as player approaches the final door area, start chase.
-      const approach = rectsOverlap({x:player.x-22,y:player.y-22,w:44,h:44}, doors.finalDoor);
-      if (approach) startChase();
-    }
-  }
-
-  // =============================
-  // 10) Rendering
-  // =============================
-  function drawWorld(){
-    // background
-    ctx.fillStyle = '#0a0c10';
-    ctx.fillRect(0,0,canvas.width, canvas.height);
-
-    // floor grid
-    ctx.save();
-    ctx.globalAlpha = 0.18;
-    ctx.strokeStyle = '#b8c7da';
-    for (let x=80;x<=1200;x+=40){
-      ctx.beginPath(); ctx.moveTo(x,80); ctx.lineTo(x,640); ctx.stroke();
-    }
-    for (let y=80;y<=640;y+=40){
-      ctx.beginPath(); ctx.moveTo(80,y); ctx.lineTo(1200,y); ctx.stroke();
-    }
-    ctx.restore();
-
-    // walls
-    ctx.fillStyle = '#161b24';
-    for (const w of walls) ctx.fillRect(w.x,w.y,w.w,w.h);
-
-    // glass room (just a tint to show it's glass)
-    ctx.save();
-    ctx.globalAlpha = 0.10;
-    ctx.fillStyle = '#9dd6ff';
-    ctx.fillRect(280,330,200,140);
-    ctx.restore();
-
-    // doors
-    for (const [k,d] of Object.entries(doors)){
-      ctx.save();
-      ctx.globalAlpha = d.open ? 0.22 : 0.9;
-      ctx.fillStyle = d.open ? '#51e39a' : '#e35b5b';
-      ctx.fillRect(d.x,d.y,d.w,d.h);
-      ctx.restore();
-
-      // door label
-      ctx.save();
-      ctx.globalAlpha = 0.85;
-      ctx.fillStyle = '#d7dee6';
-      ctx.font = '700 12px ui-sans-serif, system-ui';
-      ctx.textAlign = 'center';
-      const label = (k==='leverDoor')?'A':(k==='plateDoor')?'B':'EXIT';
-      ctx.fillText(label, d.x + d.w/2, d.y + d.h/2 + 4);
-      ctx.restore();
-    }
-
-    // lever behind glass
-    ctx.save();
-    ctx.fillStyle = lever.pulled ? '#51e39a' : '#f7c948';
-    ctx.fillRect(lever.box.x, lever.box.y, lever.box.w, lever.box.h);
-    ctx.globalAlpha = 0.7;
-    drawText(lever.box.x + lever.box.w/2, lever.box.y - 8, 'LEVER', 12, 0.8, 'center');
-    ctx.restore();
-
-    // crate
-    ctx.fillStyle = '#273042';
-    ctx.fillRect(crate.box.x, crate.box.y, crate.box.w, crate.box.h);
-    drawText(crate.box.x + crate.box.w/2, crate.box.y - 8, 'CRATE', 12, 0.7, 'center');
-
-    // plate
-    ctx.save();
-    ctx.fillStyle = plate.pressed ? '#51e39a' : '#2a3345';
-    ctx.fillRect(plate.box.x, plate.box.y, plate.box.w, plate.box.h);
-    ctx.restore();
-    drawText(plate.box.x + plate.box.w/2, plate.box.y - 8, 'PLATE', 12, 0.7, 'center');
-
-    // power nodes
-    ctx.save();
-    for (let i=0;i<power.nodes.length;i++){
-      const n = power.nodes[i];
-      ctx.beginPath();
-      ctx.fillStyle = n.on ? '#51e39a' : '#4a5873';
-      ctx.arc(n.x, n.y, n.r, 0, Math.PI*2);
-      ctx.fill();
-      ctx.globalAlpha = 0.7;
-      ctx.strokeStyle = '#d7dee6';
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-      drawText(n.x, n.y + 4, String(i+1), 12, 0.9, 'center');
-    }
-    ctx.restore();
-    drawText(980, 135, 'POWER (tap 1→2→3)', 12, 0.7, 'center');
-
-    // exit zone
-    ctx.save();
-    ctx.globalAlpha = 0.18;
-    ctx.fillStyle = '#9dd6ff';
-    ctx.fillRect(exitZone.x, exitZone.y, exitZone.w, exitZone.h);
-    ctx.restore();
-    drawText(exitZone.x + exitZone.w/2, exitZone.y - 8, 'EXIT ZONE', 12, 0.7, 'center');
-
-    // player
-    ctx.save();
-    ctx.fillStyle = '#d7dee6';
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
-    ctx.fill();
-    ctx.restore();
-
-    // hands (tethers)
-    drawHand(handL, '#4aa3ff');
-    drawHand(handR, '#ff4a7a');
-
-    // monster only in chase
-    if (game.state === 'CHASE' && monster.active){
-      ctx.save();
-      ctx.fillStyle = '#0b0c0f';
-      ctx.beginPath();
-      ctx.arc(monster.x, monster.y, monster.r, 0, Math.PI*2);
-      ctx.fill();
-      ctx.globalAlpha = 0.6;
-      ctx.strokeStyle = '#d7dee6';
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    // message
-    if (game.t < game.msg.until){
-      ctx.save();
-      ctx.globalAlpha = 0.92;
-      ctx.fillStyle = 'rgba(10,12,16,0.72)';
-      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-      const pad = 14;
-      const w = Math.min(920, ctx.measureText(game.msg.text).width + pad*2);
-      const x = (canvas.width - w)/2;
-      const y = 22;
-      ctx.roundRect(x, y, w, 44, 12);
-      ctx.fill();
-      ctx.stroke();
-      drawText(canvas.width/2, y+28, game.msg.text, 16, 1, 'center');
-      ctx.restore();
-    }
-
-    // Title overlay
-    if (game.state === 'TITLE'){
-      ctx.save();
-      ctx.fillStyle = 'rgba(0,0,0,0.55)';
-      ctx.fillRect(0,0,canvas.width, canvas.height);
-      drawText(canvas.width/2, canvas.height/2 - 30, 'Grab-Pack Puzzle Chase', 40, 1, 'center');
-      drawText(canvas.width/2, canvas.height/2 + 12, 'Click to start. Solve puzzles. Monster only appears in the final chase.', 16, 0.9, 'center');
-      ctx.restore();
-    }
-
-    // Win overlay
-    if (game.state === 'WIN'){
-      ctx.save();
-      ctx.fillStyle = 'rgba(0,0,0,0.62)';
-      ctx.fillRect(0,0,canvas.width, canvas.height);
-      drawText(canvas.width/2, canvas.height/2 - 18, 'YOU ESCAPED', 44, 1, 'center');
-      drawText(canvas.width/2, canvas.height/2 + 16, 'Nice. Add a second level next!', 18, 0.9, 'center');
-      ctx.restore();
-    }
-  }
-
-  function drawHand(hand, color){
-    const o = handOrigin(hand);
-    ctx.save();
-    ctx.globalAlpha = 0.9;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 6;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(o.x, o.y);
-    ctx.lineTo(hand.tip.x, hand.tip.y);
-    ctx.stroke();
-
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(hand.tip.x, hand.tip.y, 10, 0, Math.PI*2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // =============================
-  // 11) Main loop
-  // =============================
-  let last = performance.now();
-  function loop(now){
-    const dt = Math.min(0.033, (now - last) / 1000);
-    last = now;
-    game.t += dt;
-    game.dt = dt;
-
-    // Input events -> hands
-    if (game.state !== 'TITLE' && game.state !== 'WIN'){
-      if (mouse.justL) fire(handL);
-      if (mouse.justR) fire(handR);
-      if (keys.has('r')) { retract(handL); retract(handR); }
-    }
-    mouse.justL = false;
-    mouse.justR = false;
-
-    // Movement
-    if (game.state === 'EXPLORE' || game.state === 'CHASE'){
-      let mx = 0, my = 0;
-      if (keys.has('w')) my -= 1;
-      if (keys.has('s')) my += 1;
-      if (keys.has('a')) mx -= 1;
-      if (keys.has('d')) mx += 1;
-      if (mx || my){
-        const n = norm(mx, my);
-        tryMove(n.x * player.speed * dt, n.y * player.speed * dt);
-      }
-
+      // Hands
       updateHand(handL, dt);
       updateHand(handR, dt);
-      updateCrate(dt);
-      updateDoors();
-      updateHints();
+      tryFinalizeLatch(handL);
+      tryFinalizeLatch(handR);
+      applyLatchEffects(handL, dt);
+      applyLatchEffects(handR, dt);
+
+      // Keep latch points on moving crate
+      if (handL.state==='LATCH' && handL.latched?.userData.kind==='crate'){
+        handL.latchPoint.copy(crate.position).add(new THREE.Vector3(0,0.12,0));
+      }
+      if (handR.state==='LATCH' && handR.latched?.userData.kind==='crate'){
+        handR.latchPoint.copy(crate.position).add(new THREE.Vector3(0,0.12,0));
+      }
+
+      // Puzzle checks
+      pressPlateCheck();
+      checkHints();
+
+      // Monster
       updateMonster(dt);
 
-      // Win condition: reach exit zone during chase
-      if (game.state === 'CHASE'){
-        const inExit = rectsOverlap({x:player.x-player.r,y:player.y-player.r,w:player.r*2,h:player.r*2}, exitZone);
-        if (inExit){
-          game.state = 'WIN';
-          monster.active = false;
-          say('', 0);
-          setStatus('Escaped');
-        }
-      }
+      // Win
+      checkWin();
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
     }
 
-    drawWorld();
-    requestAnimationFrame(loop);
-  }
+    // Doors initial
+    setDoor('A', false);
+    setDoor('B', false);
+    setDoor('EXIT', false);
+    updateStatus();
+    say('', 0);
 
-  // Enable roundRect on older browsers
-  if (!CanvasRenderingContext2D.prototype.roundRect){
-    CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
-      r = Math.min(r, w/2, h/2);
-      this.beginPath();
-      this.moveTo(x+r,y);
-      this.arcTo(x+w,y,x+w,y+h,r);
-      this.arcTo(x+w,y+h,x,y+h,r);
-      this.arcTo(x,y+h,x,y,r);
-      this.arcTo(x,y,x+w,y,r);
-      this.closePath();
-      return this;
-    };
-  }
-
-  requestAnimationFrame(loop);
-})();
-</script>
+    animate();
+  </script>
 </body>
 </html>
